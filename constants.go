@@ -27,8 +27,7 @@ const (
 	MIMEApplicationForm     = "application/x-www-form-urlencoded"
 	MIMEOctetStream         = "application/octet-stream"
 	MIMEMultipartForm       = "multipart/form-data"
-	MIMEApplicationXMsgPack = "application/x-msgpack"
-	MIMEApplicationMsgPack  = "application/msgpack"
+	MIMEApplicationMsgPack  = "application/vnd.msgpack"
 
 	MIMETextXMLCharsetUTF8         = "text/xml; charset=utf-8"
 	MIMETextHTMLCharsetUTF8        = "text/html; charset=utf-8"

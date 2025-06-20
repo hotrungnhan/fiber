@@ -1449,7 +1449,7 @@ app.Get("/", func(c fiber.Ctx) error {
 ### AutoFormat
 
 Performs content-negotiation on the [Accept](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) HTTP header. It uses [Accepts](ctx.md#accepts) to select a proper format.
-The supported content types are `text/html`, `text/plain`, `application/json`, `application/msgpack`, and `application/xml`.
+The supported content types are `text/html`, `text/plain`, `application/json`, `application/vnd.msgpack`, and `application/xml`.
 For more flexible content negotiation, use [Format](ctx.md#format).
 
 :::info
@@ -1479,7 +1479,7 @@ app.Get("/", func(c fiber.Ctx) error {
   c.AutoFormat(user)
   // => {"Name":"John Doe"}
 
-  // Accept: application/msgpack
+  // Accept: application/vnd.msgpack
   c.AutoFormat(user)
   // => 82 a4 6e 61 6d 65 a4 6a 6f 68 6e a4 70 61 73 73 a3 64 6f 65
 
@@ -1810,7 +1810,7 @@ app.Get("/", func(c fiber.Ctx) error {
 Converts any **interface** or **string** to MsgPack using the [shamaton/msgpack](https://pkg.go.dev/github.com/shamaton/msgpack/v2) package.
 
 :::info
-MsgPack also sets the content header to the `ctype` parameter. If no `ctype` is passed in, the header is set to `application/msgpack`.
+MsgPack also sets the content header to the `ctype` parameter. If no `ctype` is passed in, the header is set to `application/vnd.msgpack`.
 :::
 
 ```go title="Signature"
@@ -1838,7 +1838,7 @@ app.Get("/msgpack", func(c fiber.Ctx) error {
     "name": "Grame",
     "age":  20,
   })
-  // => Content-Type: application/msgpack
+  // => Content-Type: application/vnd.msgpack
   // => 82 a4 4e 61 6d 65 a5 47 72 61 6d 65 a3 41 67 65 14
 
   return c.MsgPack(fiber.Map{

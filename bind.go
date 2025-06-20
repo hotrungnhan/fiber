@@ -281,7 +281,7 @@ func (b *Bind) Body(out any) error {
 	switch ctype {
 	case MIMEApplicationJSON:
 		return b.JSON(out)
-	case MIMEApplicationMsgPack, MIMEApplicationXMsgPack:
+	case MIMEApplicationMsgPack:
 		return b.MsgPack(out)
 	case MIMETextXML, MIMEApplicationXML:
 		return b.XML(out)

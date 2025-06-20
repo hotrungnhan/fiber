@@ -915,7 +915,7 @@ func (c *DefaultCtx) JSON(data any, ctype ...string) error {
 // MsgPack converts any interface or string to MessagePack encoded bytes.
 // If the ctype parameter is given, this method will set the
 // Content-Type header equal to ctype. If ctype is not given,
-// The Content-Type header will be set to application/msgpack.
+// The Content-Type header will be set to application/vnd.msgpack.
 func (c *DefaultCtx) MsgPack(data any, ctype ...string) error {
 	raw, err := c.app.config.MsgPackEncoder(data)
 	if err != nil {

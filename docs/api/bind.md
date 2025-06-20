@@ -41,7 +41,7 @@ It is important to specify the correct struct tag based on the content type to b
 | `application/json`                  | `json`     |
 | `application/xml`                   | `xml`      |
 | `text/xml`                          | `xml`      |
-| `application/msgpack`               | `msgpack`  |
+| `application/vnd.msgpack`               | `msgpack`  |
 
 ```go title="Signature"
 func (b *Bind) Body(out any) error
@@ -74,7 +74,7 @@ Run tests with the following `curl` commands:
 curl -X POST -H "Content-Type: application/json" --data "{\"name\":\"john\",\"pass\":\"doe\"}" localhost:3000
 
 # MsgPack
-curl -X POST -H "Content-Type: application/msgpack" --data-binary $'\x82\xa4name\xa4john\xa4pass\xa3doe'  localhost:3000
+curl -X POST -H "Content-Type: application/vnd.msgpack" --data-binary $'\x82\xa4name\xa4john\xa4pass\xa3doe'  localhost:3000
 
 # XML
 curl -X POST -H "Content-Type: application/xml" --data "<login><name>john</name><pass>doe</pass></login>" localhost:3000
@@ -227,7 +227,7 @@ app.Post("/", func(c fiber.Ctx) error {
 Run tests with the following `curl` command:
 
 ```bash
-curl -X POST -H "Content-Type: application/msgpack" --data-binary $'\x82\xa4name\xa4john\xa4pass\xa3doe'  localhost:3000
+curl -X POST -H "Content-Type: application/vnd.msgpack" --data-binary $'\x82\xa4name\xa4john\xa4pass\xa3doe'  localhost:3000
 ```
 
 ### XML

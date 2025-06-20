@@ -1232,7 +1232,7 @@ func Benchmark_Ctx_AutoFormat_MsgPack(b *testing.B) {
 	app := New()
 	c := app.AcquireCtx(&fasthttp.RequestCtx{})
 
-	c.Request().Header.Set("Accept", "application/msgpack")
+	c.Request().Header.Set("Accept", "application/vnd.msgpack")
 	b.ReportAllocs()
 
 	var err error
@@ -3758,7 +3758,7 @@ func Test_Ctx_MsgPack(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "\x81\xa4Name\xa5Grame", string(c.Response().Body()))
-	require.Equal(t, "application/msgpack", string(c.Response().Header.Peek("content-type")))
+	require.Equal(t, "application/vnd.msgpack", string(c.Response().Header.Peek("content-type")))
 
 	// Test with ctype
 	err = c.MsgPack(Map{ // map has no order
@@ -3795,7 +3795,7 @@ func Test_Ctx_MsgPack(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `["custom","msgpack"]`, string(c.Response().Body()))
-		require.Equal(t, "application/msgpack", string(c.Response().Header.Peek("content-type")))
+		require.Equal(t, "application/vnd.msgpack", string(c.Response().Header.Peek("content-type")))
 	})
 }
 
