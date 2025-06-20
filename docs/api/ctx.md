@@ -1353,13 +1353,13 @@ Passing an `offset` argument lets you override that value for a single call.
 func (c fiber.Ctx) Subdomains(offset ...int) []string
 ```
 
-| `offset` | Result                                 | Meaning                                               |
-|----------|----------------------------------------|-------------------------------------------------------|
-| *omitted* → **2** | trim 2 right-most labels             | drop the registrable domain **and** the TLD    |
-| `1` to `len(labels)-1` | trim exactly `offset` right-most labels | custom trimming of available labels    |
-| `>= len(labels)` | **return `[]`**                     | offset exceeds available labels → empty slice    |
-| `0`       | **return every label**                | keep the entire host unchanged                        |
-| `< 0`     | **return `[]`**                       | negative offsets are invalid → empty slice            |
+| `offset`               | Result                                  | Meaning                                       |
+| ---------------------- | --------------------------------------- | --------------------------------------------- |
+| *omitted* → **2**      | trim 2 right-most labels                | drop the registrable domain **and** the TLD   |
+| `1` to `len(labels)-1` | trim exactly `offset` right-most labels | custom trimming of available labels           |
+| `>= len(labels)`       | **return `[]`**                         | offset exceeds available labels → empty slice |
+| `0`                    | **return every label**                  | keep the entire host unchanged                |
+| `< 0`                  | **return `[]`**                         | negative offsets are invalid → empty slice    |
 
 #### Example
 
@@ -1449,7 +1449,7 @@ app.Get("/", func(c fiber.Ctx) error {
 ### AutoFormat
 
 Performs content-negotiation on the [Accept](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) HTTP header. It uses [Accepts](ctx.md#accepts) to select a proper format.
-The supported content types are `text/html`, `text/plain`, `application/json`, and `application/xml`.
+The supported content types are `text/html`, `text/plain`, `application/json`, `application/msgpack`, and `application/xml`.
 For more flexible content negotiation, use [Format](ctx.md#format).
 
 :::info
@@ -1478,6 +1478,10 @@ app.Get("/", func(c fiber.Ctx) error {
   // Accept: application/json
   c.AutoFormat(user)
   // => {"Name":"John Doe"}
+
+  // Accept: application/msgpack
+  c.AutoFormat(user)
+  // => 82 a4 6e 61 6d 65 a4 6a 6f 68 6e a4 70 61 73 73 a3 64 6f 65
 
   // Accept: application/xml
   c.AutoFormat(user)
@@ -1798,6 +1802,60 @@ app.Get("/", func(c fiber.Ctx) error {
 
   return c.JSONP(data, "customFunc")
   // => customFunc({"Name": "Grame", "Age": 20})
+})
+```
+
+### MsgPack
+
+Converts any **interface** or **string** to MsgPack using the [shamaton/msgpack](https://pkg.go.dev/github.com/shamaton/msgpack/v2) package.
+
+:::info
+MsgPack also sets the content header to the `ctype` parameter. If no `ctype` is passed in, the header is set to `application/msgpack`.
+:::
+
+```go title="Signature"
+func (c fiber.Ctx) MsgPack(data any, ctype ...string) error
+```
+
+```go title="Example"
+type SomeStruct struct {
+  Name string
+  Age  uint8
+}
+
+app.Get("/msgpack", func(c fiber.Ctx) error {
+  // Create data struct:
+  data := SomeStruct{
+    Name: "Grame",
+    Age:  20,
+  }
+
+  return c.MsgPack(data)
+  // => Content-Type: application/json
+  // => 82 a4 4e 61 6d 65 a5 47 72 61 6d 65 a3 41 67 65 14
+
+  return c.MsgPack(fiber.Map{
+    "name": "Grame",
+    "age":  20,
+  })
+  // => Content-Type: application/msgpack
+  // => 82 a4 4e 61 6d 65 a5 47 72 61 6d 65 a3 41 67 65 14
+
+  return c.MsgPack(fiber.Map{
+    "type":     "https://example.com/probs/out-of-credit",
+    "title":    "You do not have enough credit.",
+    "status":   403,
+    "detail":   "Your current balance is 30, but that costs 50.",
+    "instance": "/account/12345/msgs/abc",
+  }, "application/problem+msgpack")
+  // => Content-Type: application/problem+json
+  // 85 a4 74 79 70 65 d9 27 68 74 74 70 73 3a 2f 2f 65 78 61 6d 70 6c 65 2e 63
+  // 6f 6d 2f 70 72 6f 62 73 2f 6f 75 74 2d 6f 66 2d 63 72 65 64 69 74 a5 74 69
+  // 74 6c 65 be 59 6f 75 20 64 6f 20 6e 6f 74 20 68 61 76 65 20 65 6e 6f 75 67
+  // 68 20 63 72 65 64 69 74 2e a6 73 74 61 74 75 73 cd 01 93 a6 64 65 74 61 69
+  // 6c d9 2e 59 6f 75 72 20 63 75 72 72 65 6e 74 20 62 61 6c 61 6e 63 65 20 69
+  // 73 20 33 30 2c 20 62 75 74 20 74 68 61 74 20 63
+
 })
 ```
 
