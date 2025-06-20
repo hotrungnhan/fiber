@@ -1065,6 +1065,19 @@ func Benchmark_Ctx_Format(b *testing.B) {
 		}
 		require.NoError(b, err)
 	})
+
+	c.Request().Header.Set("Accept", "msgpack")
+	b.Run("msgpack", func(b *testing.B) {
+		offers := []ResFmt{
+			{MediaType: "xml", Handler: fail},
+			{MediaType: "html", Handler: fail},
+			{MediaType: "json", Handler: ok},
+		}
+		for b.Loop() {
+			err = c.Format(offers...)
+		}
+		require.NoError(b, err)
+	})
 }
 
 // go test -run Test_Ctx_AutoFormat
@@ -1084,6 +1097,11 @@ func Test_Ctx_AutoFormat(t *testing.T) {
 	require.Equal(t, "<p>Hello, World!</p>", string(c.Response().Body()))
 
 	c.Request().Header.Set(HeaderAccept, MIMEApplicationJSON)
+	err = c.AutoFormat("Hello, World!")
+	require.NoError(t, err)
+	require.Equal(t, `"Hello, World!"`, string(c.Response().Body()))
+
+	c.Request().Header.Set(HeaderAccept, MIMEApplicationMsgPack)
 	err = c.AutoFormat("Hello, World!")
 	require.NoError(t, err)
 	require.Equal(t, `"Hello, World!"`, string(c.Response().Body()))
@@ -1138,6 +1156,20 @@ func Test_Ctx_AutoFormat_Struct(t *testing.T) {
 		string(c.Response().Body()),
 	)
 
+	c.Request().Header.Set(HeaderAccept, MIMEApplicationMsgPack)
+	err = c.AutoFormat(data)
+	require.NoError(t, err)
+	require.Equal(t, c.Response().Body(),
+		[]byte{
+			//{"Sender":"Carol","Recipients":["Alice","Bob"],"Urgency":3}
+			0x83, 0xa6, 0x53, 0x65, 0x6e, 0x64, 0x65, 0x72, 0xa5, 0x43, 0x61,
+			0x72, 0x6f, 0x6c, 0xaa, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65,
+			0x6e, 0x74, 0x73, 0x92, 0xa5, 0x41, 0x6c, 0x69, 0x63, 0x65, 0xa3,
+			0x42, 0x6f, 0x62, 0xa7, 0x55, 0x72, 0x67, 0x65, 0x6e, 0x63, 0x79,
+			0x3},
+		c.Response().Body(),
+	)
+
 	c.Request().Header.Set(HeaderAccept, MIMEApplicationXML)
 	err = c.AutoFormat(data)
 	require.NoError(t, err)
@@ -1185,6 +1217,22 @@ func Benchmark_Ctx_AutoFormat_JSON(b *testing.B) {
 	c := app.AcquireCtx(&fasthttp.RequestCtx{})
 
 	c.Request().Header.Set("Accept", "application/json")
+	b.ReportAllocs()
+
+	var err error
+	for b.Loop() {
+		err = c.AutoFormat("Hello, World!")
+	}
+	require.NoError(b, err)
+	require.Equal(b, `"Hello, World!"`, string(c.Response().Body()))
+}
+
+// go test -v -run=^$ -bench=Benchmark_Ctx_AutoFormat_MsgPack -benchmem -count=4
+func Benchmark_Ctx_AutoFormat_MsgPack(b *testing.B) {
+	app := New()
+	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+
+	c.Request().Header.Set("Accept", "application/msgpack")
 	b.ReportAllocs()
 
 	var err error
@@ -3691,6 +3739,86 @@ func Benchmark_Ctx_JSON(b *testing.B) {
 	}
 	require.NoError(b, err)
 	require.JSONEq(b, `{"Name":"Grame","Age":20}`, string(c.Response().Body()))
+}
+
+// go test -run Test_Ctx_MsgPack
+func Test_Ctx_MsgPack(t *testing.T) {
+	t.Parallel()
+	app := New()
+	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+
+	err := c.MsgPack(complex(1, 1))
+
+	require.NoError(t, err)
+	require.Equal(t, "\u0600?\xf0\x00\x00\x00\x00\x00\x00?\xf0\x00\x00\x00\x00\x00\x00", string(c.Response().Body()))
+
+	// Test without ctype
+	err = c.MsgPack(Map{ // map has no order
+		"Name": "Grame",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "\x81\xa4Name\xa5Grame", string(c.Response().Body()))
+	require.Equal(t, "application/msgpack", string(c.Response().Header.Peek("content-type")))
+
+	// Test with ctype
+	err = c.MsgPack(Map{ // map has no order
+		"Name": "Grame",
+	}, "application/problem+msgpack")
+	require.NoError(t, err)
+	require.Equal(t, "\x81\xa4Name\xa5Grame", string(c.Response().Body()))
+	require.Equal(t, "application/problem+msgpack", string(c.Response().Header.Peek("content-type")))
+
+	testEmpty := func(v any, r string) {
+		err := c.MsgPack(v)
+		require.NoError(t, err)
+		require.Equal(t, r, string(c.Response().Body()))
+	}
+
+	testEmpty(nil, "\xc0")
+	testEmpty("", "\xa0")
+	testEmpty(0, "\x00")
+	testEmpty([]int{}, "\x90")
+
+	t.Run("custom msgpack encoder", func(t *testing.T) {
+		t.Parallel()
+
+		app := New(Config{
+			MsgPackEncoder: func(_ any) ([]byte, error) {
+				return []byte(`["custom","msgpack"]`), nil
+			},
+		})
+		c := app.AcquireCtx(&fasthttp.RequestCtx{})
+
+		err := c.MsgPack(Map{ // map has no order
+			"Name": "Grame",
+			"Age":  20,
+		})
+		require.NoError(t, err)
+		require.Equal(t, `["custom","msgpack"]`, string(c.Response().Body()))
+		require.Equal(t, "application/msgpack", string(c.Response().Header.Peek("content-type")))
+	})
+}
+
+// go test -run=^$ -bench=Benchmark_Ctx_MsgPack -benchmem -count=4
+func Benchmark_Ctx_MsgPack(b *testing.B) {
+	app := New()
+	c := app.AcquireCtx(&fasthttp.RequestCtx{})
+
+	type SomeStruct struct {
+		Name string
+		Age  uint8
+	}
+	data := SomeStruct{
+		Name: "Grame",
+		Age:  20,
+	}
+	var err error
+	b.ReportAllocs()
+	for b.Loop() {
+		err = c.MsgPack(data)
+	}
+	require.NoError(b, err)
+	require.Equal(b, "\x82\xa4Name\xa5Grame\xa3Age\x14", string(c.Response().Body()))
 }
 
 // go test -run Test_Ctx_CBOR
